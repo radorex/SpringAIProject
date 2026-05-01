@@ -1,6 +1,14 @@
 package com.example.springai.controller;
 
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.memory.InMemoryChatMemoryRepository;
+import org.springframework.ai.chat.memory.MessageWindowChatMemory;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -8,15 +16,31 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class OpenAIController {
 
-	private OpenAiChatModel chatModel;
 	
-	public OpenAIController(OpenAiChatModel chatModel){
-		this.chatModel=chatModel;
+	//private OpenAiChatModel chatModel;
+	private ChatClient chatClient;
+	
+	private ChatMemory memory = MessageWindowChatMemory.builder().build();
+	/*
+	 * public OpenAIController(OpenAiChatModel chatModel) { this.chatClient =
+	 * ChatClient.create(chatModel); }
+	 */
+	
+	public OpenAIController(ChatClient.Builder builder) {
+		this.chatClient = builder.defaultTools(MessageChatMemoryAdvisor.builder(memory)).build();
 	}
 	
+	
+	
 	@GetMapping("/api/{message}")
-	public String getAnswer(@PathVariable String message) {
-		String response = chatModel.call(message);
-		return response;
+	public ResponseEntity<String> getAnswer(@PathVariable String message) {
+		//String response = chatModel.call(message);
+		//String response = chatClient.prompt(message).call().content();
+		ChatResponse chatResponse = chatClient.prompt(message).call().chatResponse();
+		
+		System.out.println(chatResponse.getMetadata().getModel());
+		
+		String response = chatResponse.getResult().getOutput().getText();
+		return new ResponseEntity<String>("With Chat Client : "+response,HttpStatus.OK);
 	}
 }
